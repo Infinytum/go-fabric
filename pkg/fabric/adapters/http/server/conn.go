@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,9 +16,12 @@ type Conn struct {
 	server   *Server
 	ReadBuf  *bytes.Buffer
 	WriteBuf *bytes.Buffer
+	sync.Mutex
 }
 
 func (c *Conn) Read(b []byte) (n int, err error) {
+	c.Lock()
+	defer c.Unlock()
 	if c.Closed {
 		return 0, errors.New("Connection is closed")
 	}
@@ -25,6 +29,8 @@ func (c *Conn) Read(b []byte) (n int, err error) {
 }
 
 func (c *Conn) Write(b []byte) (n int, err error) {
+	c.Lock()
+	defer c.Unlock()
 	if c.Closed {
 		return 0, errors.New("Connection is closed")
 	}
@@ -32,6 +38,8 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 }
 
 func (c *Conn) Close() error {
+	c.Lock()
+	defer c.Unlock()
 	c.Closed = true
 	c.server.Disconnect(c.addr.id)
 	return nil
