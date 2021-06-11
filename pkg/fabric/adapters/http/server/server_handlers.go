@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -63,6 +64,7 @@ func (server *Server) onEgress(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if conn, ok := server.clients[clientID.String()]; ok {
+		server.clientsTimeout[clientID.String()] = time.Now()
 		data, err := ioutil.ReadAll(conn.WriteBuf)
 		if err != nil {
 			w.WriteHeader(500)

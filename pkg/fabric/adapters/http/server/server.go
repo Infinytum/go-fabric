@@ -8,12 +8,14 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 type Server struct {
 	clients        map[string]*Conn
+	clientsTimeout map[string]time.Time
 	NewConnections chan *Conn
 	logger         *log.Logger
 	httpServer     *http.Server
@@ -49,6 +51,7 @@ func (s *Server) Connect(id uuid.UUID) {
 		WriteBuf: new(bytes.Buffer),
 	}
 	s.clients[id.String()] = client
+	s.clientsTimeout[id.String()] = time.Now()
 	s.NewConnections <- client
 	s.logger.Printf("Client %s has been connected from the server", id.String())
 }
@@ -62,6 +65,7 @@ func (s *Server) Disconnect(id uuid.UUID) {
 			client.Close()
 		}
 		delete(s.clients, id.String())
+		delete(s.clientsTimeout, id.String())
 	}
 	s.logger.Printf("Client %s has been disconnected from the server", id.String())
 }
@@ -72,6 +76,14 @@ func (s *Server) ListenAndServe(address string) *http.Server {
 	http.HandleFunc("/disconnect", s.onDisconnect)
 	http.HandleFunc("/egress", s.onEgress)
 	http.HandleFunc("/ingress", s.onIngress)
+
+	go func() {
+		for id, t := range s.clientsTimeout {
+			if time.Since(t) > time.Minute {
+				s.Disconnect(uuid.MustParse(id))
+			}
+		}
+	}()
 
 	go func() {
 		defer s.wg.Done() // let main know we are done cleaning up
