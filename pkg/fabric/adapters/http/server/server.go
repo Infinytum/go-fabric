@@ -78,10 +78,14 @@ func (s *Server) ListenAndServe(address string) *http.Server {
 	http.HandleFunc("/ingress", s.onIngress)
 
 	go func() {
-		for id, t := range s.clientsTimeout {
-			if time.Since(t) > time.Minute {
-				s.Disconnect(uuid.MustParse(id))
+		for {
+			for id, t := range s.clientsTimeout {
+				if time.Since(t) > time.Minute {
+					s.logger.Printf("Client %s has timed out and will be disconnected from the server", id)
+					s.Disconnect(uuid.MustParse(id))
+				}
 			}
+			<-time.After(5 * time.Second)
 		}
 	}()
 
