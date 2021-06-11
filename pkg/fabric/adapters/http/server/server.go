@@ -82,7 +82,7 @@ func (s *Server) ListenAndServe(address string) *http.Server {
 			for id, t := range s.clientsTimeout {
 				if time.Since(t) > time.Minute {
 					s.logger.Printf("Client %s has timed out and will be disconnected from the server", id)
-					s.Disconnect(uuid.MustParse(id))
+					s.clients[id].Close()
 				}
 			}
 			<-time.After(5 * time.Second)
