@@ -104,6 +104,7 @@ func NewServer(logger *log.Logger) *Server {
 	}
 	return &Server{
 		clients:        make(map[string]*Conn),
+		clientsTimeout: make(map[string]time.Time),
 		logger:         logger,
 		NewConnections: make(chan *Conn),
 		wg:             &sync.WaitGroup{},
