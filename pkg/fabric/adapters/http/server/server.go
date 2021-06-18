@@ -79,7 +79,13 @@ func (s *Server) ListenAndServe(address string) *http.Server {
 
 	go func() {
 		for {
-			for id, t := range s.clientsTimeout {
+			clientsTimeout := make(map[string]time.Time)
+			s.Lock()
+			for key, value := range s.clientsTimeout {
+				clientsTimeout[key] = value
+			}
+			s.Unlock()
+			for id, t := range clientsTimeout {
 				if time.Since(t) > time.Minute {
 					s.logger.Warnf("Client %s has timed out and will be disconnected from the server", id)
 					s.clients[id].Close()
