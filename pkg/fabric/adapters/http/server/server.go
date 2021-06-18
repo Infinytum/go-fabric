@@ -6,18 +6,18 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 type Server struct {
 	clients        map[string]*Conn
 	clientsTimeout map[string]time.Time
 	NewConnections chan *Conn
-	logger         *log.Logger
+	logger         *logrus.Logger
 	httpServer     *http.Server
 	wg             *sync.WaitGroup
 	sync.Mutex
@@ -43,7 +43,7 @@ func (s *Server) Close() error {
 func (s *Server) Connect(id uuid.UUID) {
 	s.Lock()
 	defer s.Unlock()
-	s.logger.Printf("Attempting to connect client %s from server", id.String())
+	s.logger.Debugf("Attempting to connect client %s from server", id.String())
 	client := &Conn{
 		addr:     Addr{id: id},
 		server:   s,
@@ -53,13 +53,13 @@ func (s *Server) Connect(id uuid.UUID) {
 	s.clients[id.String()] = client
 	s.clientsTimeout[id.String()] = time.Now()
 	s.NewConnections <- client
-	s.logger.Printf("Client %s has been connected from the server", id.String())
+	s.logger.Infof("Client %s has been connected from the server", id.String())
 }
 
 func (s *Server) Disconnect(id uuid.UUID) {
 	s.Lock()
 	defer s.Unlock()
-	s.logger.Printf("Attempting to disconnect client %s from server", id.String())
+	s.logger.Debugf("Attempting to disconnect client %s from server", id.String())
 	if client, ok := s.clients[id.String()]; ok {
 		if !client.Closed {
 			client.Close()
@@ -67,7 +67,7 @@ func (s *Server) Disconnect(id uuid.UUID) {
 		delete(s.clients, id.String())
 		delete(s.clientsTimeout, id.String())
 	}
-	s.logger.Printf("Client %s has been disconnected from the server", id.String())
+	s.logger.Infof("Client %s has been disconnected from the server", id.String())
 }
 
 func (s *Server) ListenAndServe(address string) *http.Server {
@@ -81,7 +81,7 @@ func (s *Server) ListenAndServe(address string) *http.Server {
 		for {
 			for id, t := range s.clientsTimeout {
 				if time.Since(t) > time.Minute {
-					s.logger.Printf("Client %s has timed out and will be disconnected from the server", id)
+					s.logger.Warnf("Client %s has timed out and will be disconnected from the server", id)
 					s.clients[id].Close()
 				}
 			}
@@ -102,10 +102,11 @@ func (s *Server) ListenAndServe(address string) *http.Server {
 	return s.httpServer
 }
 
-func NewServer(logger *log.Logger) *Server {
+func NewServer(logger *logrus.Logger) *Server {
 	if logger == nil {
-		logger = log.New(os.Stdout, "[BuiltInServerAdapter] ", log.Default().Flags())
+		logger = logrus.New()
 	}
+	logger = logger.WithField("fabric_adapter", "http").WithField("fabric_mode", "server").WithField("component", "http_server").Logger
 	return &Server{
 		clients:        make(map[string]*Conn),
 		clientsTimeout: make(map[string]time.Time),

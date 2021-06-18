@@ -1,15 +1,14 @@
 package builtin
 
 import (
-	"log"
 	"net"
-	"os"
 
 	"github.com/infinytum/go-fabric/pkg/fabric"
+	"github.com/sirupsen/logrus"
 )
 
 type ServerAdapter struct {
-	logger *log.Logger
+	logger *logrus.Logger
 }
 
 func (adapter *ServerAdapter) Available() error {
@@ -18,15 +17,15 @@ func (adapter *ServerAdapter) Available() error {
 }
 
 func (adapter *ServerAdapter) Listen(network, address string) (net.Listener, error) {
-	adapter.logger.Printf("Creating fabric %s listener on %s", network, address)
+	adapter.logger.Infof("Creating fabric %s listener on %s", network, address)
 	return net.Listen(network, address)
 }
 
-func NewServerAdapter(logger *log.Logger) fabric.ServerAdapter {
+func NewServerAdapter(logger *logrus.Logger) fabric.ServerAdapter {
 	if logger == nil {
-		logger = log.New(os.Stdout, "[HTTPServerAdapter] ", log.Default().Flags())
+		logger = logrus.New()
 	}
-	logger.SetPrefix("[HTTPServerAdapter] ")
+	logger = logger.WithField("fabric_adapter", "builtIn").WithField("fabric_mode", "server").Logger
 	return &ServerAdapter{
 		logger: logger,
 	}

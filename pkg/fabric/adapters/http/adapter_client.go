@@ -1,16 +1,15 @@
 package http
 
 import (
-	"log"
 	"net"
-	"os"
 
 	"github.com/infinytum/go-fabric/pkg/fabric"
 	"github.com/infinytum/go-fabric/pkg/fabric/adapters/http/client"
+	"github.com/sirupsen/logrus"
 )
 
 type ClientAdapter struct {
-	logger *log.Logger
+	logger *logrus.Logger
 }
 
 func (adapter *ClientAdapter) Available() error {
@@ -19,7 +18,7 @@ func (adapter *ClientAdapter) Available() error {
 }
 
 func (adapter *ClientAdapter) Dial(network, address string) (net.Conn, error) {
-	adapter.logger.Printf("Creating fabric %s connection to %s", network, address)
+	adapter.logger.Infof("Creating fabric %s connection to %s", network, address)
 	client := client.NewConn(network+"://"+address, nil)
 	if err := client.Connect(); err != nil {
 		return nil, err
@@ -27,11 +26,11 @@ func (adapter *ClientAdapter) Dial(network, address string) (net.Conn, error) {
 	return client, nil
 }
 
-func NewClientAdapter(logger *log.Logger) fabric.ClientAdapter {
+func NewClientAdapter(logger *logrus.Logger) fabric.ClientAdapter {
 	if logger == nil {
-		logger = log.New(os.Stdout, "[HTTPClientAdapter] ", log.Default().Flags())
+		logger = logrus.New()
 	}
-	logger.SetPrefix("[HTTPClientAdapter] ")
+	logger = logger.WithField("fabric_adapter", "http").WithField("fabric_mode", "client").Logger
 	return &ClientAdapter{
 		logger: logger,
 	}

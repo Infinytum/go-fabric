@@ -6,24 +6,23 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 type Conn struct {
 	addr     Addr
 	endpoint string
-	logger   *log.Logger
+	logger   *logrus.Logger
 }
 
 func (c *Conn) Connect() error {
-	c.logger.Println("Connecting to fabric http server")
+	c.logger.Debug("Connecting to fabric http server")
 	resp, err := http.Get(c.endpoint + "/connect")
 	if err != nil {
 		return err
@@ -37,10 +36,10 @@ func (c *Conn) Connect() error {
 	if id, err := uuid.ParseBytes(body); err == nil {
 		c.addr = Addr{id: id}
 
-		c.logger.Println("Connected to fabric http server")
+		c.logger.Info("Connected to fabric http server")
 		return nil
 	}
-	return errors.New("Invalid UUID")
+	return errors.New("invalid UUID")
 }
 
 func (c *Conn) Read(b []byte) (n int, err error) {
@@ -89,12 +88,12 @@ func (c *Conn) SetDeadline(t time.Time) error {
 }
 
 func (c *Conn) SetReadDeadline(t time.Time) error {
-	c.logger.Println("Fabric HTTP does not support read timeouts yet")
+	c.logger.Warn("Fabric HTTP does not support read timeouts yet")
 	return nil
 }
 
 func (c *Conn) SetWriteDeadline(t time.Time) error {
-	c.logger.Println("Fabric HTTP does not support write timeouts yet")
+	c.logger.Warn("Fabric HTTP does not support write timeouts yet")
 	return nil
 }
 
@@ -110,10 +109,11 @@ func (a Addr) String() string {
 	return a.id.String()
 }
 
-func NewConn(endpoint string, logger *log.Logger) *Conn {
+func NewConn(endpoint string, logger *logrus.Logger) *Conn {
 	if logger == nil {
-		logger = log.New(os.Stdout, "[HTTPClientAdapter] ", log.Default().Flags())
+		logger = logrus.New()
 	}
+	logger = logger.WithField("fabric_adapter", "http").WithField("fabric_mode", "client").WithField("component", "http_conn").Logger
 	return &Conn{
 		addr:     Addr{id: uuid.Nil},
 		endpoint: endpoint,
