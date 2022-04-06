@@ -73,7 +73,7 @@ func (server *Server) onEgress(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write([]byte(base64.StdEncoding.EncodeToString(data)))
 	} else {
-		server.logger.Printf("Received egress attempt from %s with invalid client_id %s", r.RemoteAddr, clientIDRaw)
+		server.logger.Printf("Received egress attempt from %s with unknown client_id %s", r.RemoteAddr, clientIDRaw)
 		w.WriteHeader(403)
 		return
 	}
@@ -121,7 +121,7 @@ func (server *Server) onIngress(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		server.logger.Printf("Received egress attempt from %s with invalid client_id %s", r.RemoteAddr, clientIDRaw)
+		server.logger.Printf("Received ingress attempt from %s with unknown client_id %s", r.RemoteAddr, clientIDRaw)
 		w.WriteHeader(403)
 		return
 	}
